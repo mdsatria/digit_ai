@@ -1,12 +1,13 @@
 # =====================================================
-# FLASK + SKLEARN MNIST INFERENCE SERVER
+# FLASK + PYTORCH MNIST CNN INFERENCE SERVER
 # =====================================================
 
 import base64
 import re
 
-import joblib
 import numpy as np
+import torch
+import torch.nn as nn
 from flask import Flask, jsonify, render_template, request
 from PIL import Image
 
@@ -16,12 +17,49 @@ from PIL import Image
 app = Flask(__name__)
 
 # =====================================================
-# LOAD SKLEARN MODEL
+# DEVICE
 # =====================================================
-MODEL_PATH = "models/mnist_mlp.pkl"
-model = joblib.load(MODEL_PATH)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print("Device:", device)
 
-print("✅ Sklearn model loaded. Start serving...")
+
+# =====================================================
+# CNN MODEL DEFINITION
+# (Must match training architecture)
+# =====================================================
+class MNIST_CNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.conv = nn.Sequential(
+            nn.Conv2d(1, 32, 3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Conv2d(32, 64, 3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+        )
+
+        self.fc = nn.Sequential(
+            nn.Flatten(), nn.Linear(64 * 7 * 7, 128), nn.ReLU(), nn.Linear(128, 10)
+        )
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.fc(x)
+        return x
+
+
+# =====================================================
+# LOAD MODEL
+# =====================================================
+MODEL_PATH = "models/mnist_cnn.pt"
+
+model = MNIST_CNN().to(device)
+model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
+model.eval()
+
+print("✅ PyTorch CNN model loaded. Start serving...")
 
 
 # =====================================================
@@ -52,35 +90,41 @@ def predict():
     convertImage(imgData)
 
     # =================================================
-    # PREPROCESS (same as training)
+    # PREPROCESS (same as CNN training)
     # =================================================
     n_size = 28
 
-    x = Image.open("output.png").resize((n_size, n_size)).convert("L")
+    img = Image.open("output.png").resize((n_size, n_size)).convert("L")
 
-    x = np.array(x)
+    x = np.array(img)
 
-    # Invert (white canvas → black bg)
+    # Invert colors
     x = np.invert(x)
 
     # Normalize
     x = x.astype(np.float32) / 255.0
 
-    # Flatten
-    x = x.reshape(1, -1)
+    # Shape → (1, 1, 28, 28)
+    x = torch.tensor(x).unsqueeze(0).unsqueeze(0).to(device)
 
     # =================================================
-    # PREDICTION
+    # INFERENCE
     # =================================================
-    probs = model.predict_proba(x)[0]  # shape (10,)
+    with torch.no_grad():
 
-    predicted_class = int(np.argmax(probs))
-    confidence = float(probs[predicted_class])
+        outputs = model(x)
+
+        probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
+
+        predicted_class = int(np.argmax(probs))
+        confidence = float(probs[predicted_class])
 
     print("Prediction:", predicted_class)
     print("Confidence:", confidence)
 
-    # Return JSON
+    # =================================================
+    # RETURN JSON
+    # =================================================
     return jsonify(
         {"label": predicted_class, "confidence": confidence, "probs": probs.tolist()}
     )

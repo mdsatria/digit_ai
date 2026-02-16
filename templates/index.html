@@ -1,261 +1,125 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pengenalan Tulisan Tangan dengan ANN</title>
-    <link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<title>MNIST Prediction</title>
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-        .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            padding: 40px;
-            max-width: 1200px;
-            margin: 20px auto;
-        }
+<style>
+body{
+    font-family: Arial;
+    background: linear-gradient(135deg,#667eea,#764ba2);
+    text-align:center;
+    padding:40px;
+}
 
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-            font-size: 28px;
-            margin-bottom: 10px;
-            font-weight: 600;
-        }
+.container{
+    background:white;
+    padding:30px;
+    border-radius:15px;
+    width:800px;
+    margin:auto;
+}
 
-        h1 span {
-            color: #667eea;
-            display: block;
-            font-size: 24px;
-            font-weight: 400;
-            margin-top: 8px;
-        }
+canvas{
+    border:3px solid #667eea;
+    background:white;
+}
 
-        .subtitle {
-            text-align: center;
-            color: #7f8c8d;
-            font-size: 14px;
-            margin-bottom: 40px;
-        }
+button{
+    padding:10px 20px;
+    margin:10px;
+    font-size:16px;
+    cursor:pointer;
+}
 
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            align-items: start;
-        }
-
-        .canvas-section {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        #canvas {
-            border: 3px solid #667eea;
-            border-radius: 12px;
-            cursor: crosshair;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
-            background: #ffffff;
-            margin-bottom: 20px;
-        }
-
-        .instruction {
-            background: linear-gradient(135deg, #4DAF7C 0%, #3d8f66 100%);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 500;
-            margin-bottom: 20px;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 15px;
-        }
-
-        .btn {
-            padding: 12px 30px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        #clearButton {
-            background: #e74c3c;
-            color: white;
-        }
-
-        #clearButton:hover {
-            background: #c0392b;
-            transform: translateY(-2px);
-        }
-
-        .myButton {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .myButton:hover {
-            transform: translateY(-2px);
-        }
-
-        .result-section {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .result-card {
-            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
-            border-radius: 15px;
-            padding: 40px;
-            text-align: center;
-            width: 100%;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .result-label {
-            color: #7f8c8d;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 15px;
-            font-weight: 600;
-        }
-
-        #result {
-            font-size: 72px;
-            font-weight: 700;
-            color: #667eea;
-            min-height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .result-empty {
-            color: #bdc3c7;
-            font-size: 18px;
-            font-style: italic;
-        }
-
-        .info-box {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 30px;
-            color: #856404;
-        }
-
-        .info-box h3 {
-            margin-bottom: 10px;
-            font-size: 16px;
-        }
-
-        .info-box ul {
-            margin-left: 20px;
-            font-size: 14px;
-            line-height: 1.8;
-        }
-
-        @media (max-width: 968px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+#result{
+    font-size:40px;
+    margin-top:20px;
+    color:#667eea;
+}
+</style>
 </head>
+
 <body>
-    <div class="container">
-        <h1>Pengenalan Tulisan Tangan
-            <span>Artificial Neural Networks Sederhana</span>
-        </h1>
-        <p class="subtitle">Gambar angka 0-9 pada canvas dan klik prediksi untuk melihat hasilnya</p>
 
-        <div class="main-content">
-            <div class="canvas-section">
-                <canvas id="canvas" width="280" height="280"></canvas>
-                
-                <div class="instruction">
-                    ✍️ Gambar Angka di Sini!
-                </div>
+<div class="container">
 
-                <div class="button-group">
-                    <button type="button" id="clearButton" class="btn">🗑️ Clear</button>
-                    <a href="#" class="myButton btn">🔮 Prediksi</a>
-                </div>
+<h2>Handwritten Digit Prediction</h2>
 
-                <div class="info-box">
-                    <h3>📝 Petunjuk:</h3>
-                    <ul>
-                        <li>Gambar angka dengan jelas</li>
-                        <li>Klik "Prediksi" untuk hasil</li>
-                        <li>Klik "Clear" untuk ulang</li>
-                    </ul>
-                </div>
-            </div>
+<canvas id="canvas" width="280" height="280"></canvas>
+<br>
 
-            <div class="result-section">
-                <div class="result-card">
-                    <div class="result-label">Hasil Prediksi</div>
-                    <div id="result">
-                        <span class="result-empty">Belum ada prediksi</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+<button id="clear">Clear</button>
+<button id="predict">Predict</button>
 
-    <script src='https://code.jquery.com/jquery-3.5.1.min.js'></script>
-    <script src="{{ url_for('static',filename='index.js') }}"></script>
-    <script type="text/javascript">
-        var $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+<div id="result">No prediction yet</div>
+<div id="confidence"></div>
 
-        $(".myButton").click(function(e){
-            e.preventDefault();
-            var canvasObj = document.getElementById("canvas");
-            var img = canvasObj.toDataURL();
-            
-            $.ajax({
-                type: "POST",
-                url: $SCRIPT_ROOT + "/predict/",
-                data: img,
-                success: function(data){
-                    $('#result').text(' Hasil Prediksi: ' + data);
-                },
-                error: function(error){
-                    console.error('Error:', error);
-                    $('#result').html('<span style="color: #e74c3c;">Error</span>');
+<canvas id="chart" width="400" height="200"></canvas>
+
+</div>
+
+<script src="{{ url_for('static',filename='index.js') }}"></script>
+
+<script>
+
+let chart;
+
+$("#predict").click(function(){
+
+    let canvas = document.getElementById("canvas");
+    let img = canvas.toDataURL();
+
+    $.ajax({
+        type: "POST",
+        url: "/predict/",
+        data: img,
+        success: function(data){
+
+            $("#result").text("Prediction: " + data.label);
+            $("#confidence").text(
+                "Confidence: " +
+                (data.confidence*100).toFixed(2) + "%"
+            );
+
+            const labels =
+            ['0','1','2','3','4','5','6','7','8','9'];
+
+            if(chart){ chart.destroy(); }
+
+            chart = new Chart(
+                document.getElementById("chart"),
+                {
+                    type: "bar",
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: "Probability",
+                            data: data.probs
+                        }]
+                    },
+                    options:{
+                        scales:{
+                            y:{
+                                beginAtZero:true,
+                                max:1
+                            }
+                        }
+                    }
                 }
-            });
-        });
+            );
+        }
+    });
+});
 
-        $("#clearButton").click(function(){
-            $('#result').html('<span class="result-empty">Belum ada prediksi</span>');
-        });
-    </script>
+$("#clear").click(function(){
+    location.reload();
+});
+
+</script>
+
 </body>
 </html>
